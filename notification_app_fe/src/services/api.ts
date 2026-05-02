@@ -3,37 +3,42 @@ import { Logger } from '../utils/logger';
 
 const BASE_URL = 'http://20.207.122.201/evaluation-service';
 
-export const register = async (userData: any) => {
+export interface Notification {
+  ID: string;
+  Type: 'Placement' | 'Result' | 'Event';
+  Message: string;
+  Timestamp: string;
+}
+
+const TYPE_WEIGHTS = {
+  'Placement': 3,
+  'Result': 2,
+  'Event': 1
+};
+
+export const fetchNotifications = async (params?: { limit?: number; page?: number; notification_type?: string }) => {
   try {
-    const response = await axios.post(`${BASE_URL}/register`, userData);
-    return response.data;
+    const response = await axios.get(`${BASE_URL}/notifications`, { params });
+    await Logger.Log('frontend', 'info', 'api', `Fetched ${response.data.notifications?.length || 0} notifications`);
+    return response.data.notifications as Notification[];
   } catch (error: any) {
-    console.error('Registration failed:', error.response?.data || error.message);
-    throw error;
+    await Logger.Log('frontend', 'error', 'api', `Failed to fetch notifications: ${error.message}`);
+    // Return empty array on error to prevent UI crash
+    return [];
   }
 };
 
-export const getAuthToken = async (authData: any) => {
-  try {
-    const response = await axios.post(`${BASE_URL}/auth`, authData);
-    const { access_token } = response.data;
-    if (access_token) {
-      Logger.setAuthToken(access_token);
-    }
-    return response.data;
-  } catch (error: any) {
-    console.error('Auth failed:', error.response?.data || error.message);
-    throw error;
-  }
-};
-
-export const fetchNotifications = async () => {
-  // In a real app, this would fetch from a notification endpoint
-  // For now, we return mock data
-  return [
-    { id: 1, title: 'Server Down', message: 'Backend server is not responding.', level: 'error', time: '2 mins ago' },
-    { id: 2, title: 'New User', message: 'A new user has registered.', level: 'info', time: '10 mins ago' },
-    { id: 3, title: 'Database Warning', message: 'Database connection is slow.', level: 'warn', time: '1 hour ago' },
-    { id: 4, title: 'Deployment Success', message: 'Version 1.2.0 deployed successfully.', level: 'debug', time: '2 hours ago' },
-  ];
+export const getPriorityNotifications = (notifications: Notification[], n: number = 10) => {
+  return [...notifications]
+    .sort((a, b) => {
+      const weightA = TYPE_WEIGHTS[a.Type] || 0;
+      const weightB = TYPE_WEIGHTS[b.Type] || 0;
+      
+      if (weightB !== weightA) {
+        return weightB - weightA;
+      }
+      
+      return new Date(b.Timestamp).getTime() - new Date(a.Timestamp).getTime();
+    })
+    .slice(0, n);
 };
