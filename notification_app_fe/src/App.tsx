@@ -139,7 +139,7 @@ function App() {
         
         {tabValue === 1 && !loading && displayedNotifications.length > 0 && (
           <Typography variant="caption" sx={{ mt: 2, display: 'block', textAlign: 'center', color: 'text.secondary' }}>
-            Showing top 10 notifications weighted by Type (Placement > Result > Event) and Recency.
+            Showing top 10 notifications weighted by Type (Placement &gt; Result &gt; Event) and Recency.
           </Typography>
         )}
       </Container>
